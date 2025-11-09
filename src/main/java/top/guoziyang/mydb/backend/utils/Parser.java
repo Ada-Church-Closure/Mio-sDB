@@ -24,7 +24,7 @@ public class Parser {
         ByteBuffer buffer = ByteBuffer.wrap(buf, 0, 4);
         return buffer.getInt();
     }
-
+    // 解析字符串结果, 包含字符串和总共占用的字节数
     public static long parseLong(byte[] buf) {
         ByteBuffer buffer = ByteBuffer.wrap(buf, 0, 8);
         return buffer.getLong();

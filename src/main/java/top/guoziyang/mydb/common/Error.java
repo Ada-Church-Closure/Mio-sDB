@@ -1,5 +1,6 @@
 package top.guoziyang.mydb.common;
 
+// 定义系统中常见的异常
 public class Error {
     // common
     public static final Exception CacheFullException = new RuntimeException("Cache is full!");
