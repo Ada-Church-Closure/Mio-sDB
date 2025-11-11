@@ -1,6 +1,10 @@
-# MYDB
+# Mio'sDB
 
-MYDB 是一个 Java 实现的简单的数据库，部分原理参照自 MySQL、PostgreSQL 和 SQLite。实现了以下功能：
+> 参考了原项目:
+>
+> 原博客地址:
+
+Mio'sDB 是一个 Java 实现的简单的数据库，部分原理参照自 MySQL、PostgreSQL 和 SQLite。实现了以下功能：
 
 - 数据的可靠性和数据恢复
 - 两段锁协议（2PL）实现可串行化调度
@@ -42,5 +46,3 @@ mvn exec:java -Dexec.mainClass="top.guoziyang.mydb.client.Launcher"
 会启动一个交互式命令行，就可以在这里输入类 SQL 语法，回车会发送语句到服务，并输出执行的结果。
 
 一个执行示例：
-
-![](https://s3.bmp.ovh/imgs/2021/11/2749906870276904.png)

@@ -5,12 +5,18 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import top.guoziyang.mydb.backend.dm.pageCache.PageCache;
 
+// 页面实现类,实现了页面接口
 public class PageImpl implements Page {
+    // 页面编号,从1开始
     private int pageNumber;
+    // 页面实际包含的数据
     private byte[] data;
+    // 页面是否被修改过
     private boolean dirty;
+    // 保护页面的锁
     private Lock lock;
-    
+
+    // 页面所属的页面缓存,可以用于快速释放页面
     private PageCache pc;
 
     public PageImpl(int pageNumber, byte[] data, PageCache pc) {

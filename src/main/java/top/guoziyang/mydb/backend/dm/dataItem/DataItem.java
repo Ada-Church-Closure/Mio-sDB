@@ -10,6 +10,11 @@ import top.guoziyang.mydb.backend.dm.page.Page;
 import top.guoziyang.mydb.backend.utils.Parser;
 import top.guoziyang.mydb.backend.utils.Types;
 
+// 数据项接口,定义了数据项的基本操作
+// 数据项(DataItem)是数据库管理系统中用于存储实际数据的基本单位
+// 它通常包含了数据的内容以及一些元数据,如数据的状态、版本等
+// 数据项可以存储在页面(Page)中,页面是数据库中用于组织和管理数据项的结构
+// 数据项会出现在 page缓存 磁盘 以及日志中.
 public interface DataItem {
     SubArray data();
     

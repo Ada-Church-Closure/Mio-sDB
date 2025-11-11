@@ -11,7 +11,16 @@ import top.guoziyang.mydb.backend.utils.Panic;
 import top.guoziyang.mydb.backend.utils.Parser;
 import top.guoziyang.mydb.common.Error;
 
+// 日志系统,用于记录数据库的修改操作,以支持事务的原子性和持久性
+// 其实主要就是为了崩溃恢复服务的
+// 日志文件格式:
+// LOG_FILE_HEADER:
+// | 4 bytes |  --> logTail指针,指向日志文件的末尾
+// LOG_FILE_BODY:
+// | ...      |  --> 日志记录
+// [XChecksum][Log1][Log2][Log3]...[LogN][BadTail]
 public interface Logger {
+    // [XChecksum][Log1][Log2][Log3]...[LogN][BadTail]
     void log(byte[] data);
     void truncate(long x) throws Exception;
     byte[] next();

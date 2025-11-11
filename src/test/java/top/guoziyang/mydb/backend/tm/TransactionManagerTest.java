@@ -22,8 +22,10 @@ public class TransactionManagerTest {
     private Map<Long, Byte> transMap;
     private CountDownLatch cdl;
 
+    // 多线程测试TransactionManager
     @Test
     public void testMultiThread() {
+        // 创建TransactionManager实例
         tmger = TransactionManager.create("/tmp/tranmger_test");
         transMap = new ConcurrentHashMap<>();
         cdl = new CountDownLatch(noWorkers);

@@ -5,6 +5,7 @@ import java.util.Arrays;
 
 import com.google.common.primitives.Bytes;
 
+// 解析器, 提供基本的数据类型和字符串的相互转换
 public class Parser {
 
     public static byte[] short2Byte(short value) {
