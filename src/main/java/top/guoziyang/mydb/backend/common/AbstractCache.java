@@ -109,6 +109,7 @@ public abstract class AbstractCache<T> {
     /**
      * 强行释放一个缓存
      * 引用计数减1，若引用计数为0，则将资源写回并从缓存中移除
+     * 引用计数不为0表示还有其他线程在使用该资源，不能释放
      * @param key 资源的唯一标识符
      */
     protected void release(long key) {

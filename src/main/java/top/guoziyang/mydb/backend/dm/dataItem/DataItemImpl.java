@@ -24,6 +24,7 @@ public class DataItemImpl implements DataItem {
     private byte[] oldRaw;
     private Lock rLock;
     private Lock wLock;
+    // 释放本身会依赖于dm的释放.
     private DataManagerImpl dm;
     private long uid;
     private Page pg;
@@ -43,11 +44,15 @@ public class DataItemImpl implements DataItem {
         return raw.raw[raw.start+OF_VALID] == (byte)0;
     }
 
+    // 返回共享数组
     @Override
     public SubArray data() {
         return new SubArray(raw.raw, raw.start+OF_DATA, raw.end);
     }
 
+    /**
+     * 一次修改之前要调用before方法,wlock
+     */
     @Override
     public void before() {
         wLock.lock();
@@ -55,18 +60,28 @@ public class DataItemImpl implements DataItem {
         System.arraycopy(raw.raw, raw.start, oldRaw, 0, oldRaw.length);
     }
 
+    /**
+     * 撤销操作,调用这个方法,unlock()
+     */
     @Override
     public void unBefore() {
         System.arraycopy(oldRaw, 0, raw.raw, raw.start, oldRaw.length);
         wLock.unlock();
     }
 
+    /**
+     * update之后,调用after方法,要对于当前的操作落日志.
+     * @param xid   事务xid
+     */
     @Override
     public void after(long xid) {
         dm.logDataItem(xid, this);
         wLock.unlock();
     }
 
+    /**
+     * 使用结束之后,及时release这个DI缓存
+     */
     @Override
     public void release() {
         dm.releaseDataItem(this);

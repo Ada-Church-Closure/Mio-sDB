@@ -12,7 +12,6 @@ import top.guoziyang.mydb.backend.utils.RandomUtil;
  * 用于判断上一次数据库是否正常关闭,如果没有正常关闭，则说明可能有未刷新的数据，需要进行恢复
  * 恢复就是利用日志将未刷新的数据重新写入页面
  */
-// TODO 打开关闭的次数过多难道不会写穿这个pageOne?是否使用循环写入更好?
 public class PageOne {
     // VC: Valid Check,100是字节偏移,8字节长度,偏移100是为了避开常用的元数据区域
     private static final int OF_VC = 100;

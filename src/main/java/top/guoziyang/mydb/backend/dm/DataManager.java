@@ -6,7 +6,9 @@ import top.guoziyang.mydb.backend.dm.page.PageOne;
 import top.guoziyang.mydb.backend.dm.pageCache.PageCache;
 import top.guoziyang.mydb.backend.tm.TransactionManager;
 
+// DM给上层提供的接口.
 public interface DataManager {
+    // DM只用提供read 和 insert 方法,update是利用di来进行更改的
     DataItem read(long uid) throws Exception;
     long insert(long xid, byte[] data) throws Exception;
     void close();
