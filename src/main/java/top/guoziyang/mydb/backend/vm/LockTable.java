@@ -11,7 +11,8 @@ import java.util.concurrent.locks.ReentrantLock;
 import top.guoziyang.mydb.common.Error;
 
 /**
- * 维护了一个依赖等待图，以进行死锁检测
+ * 维护了一个依赖等待图，以进行死锁检测.
+ * 这里比较像OS中的死锁检测问题.
  */
 public class LockTable {
     
