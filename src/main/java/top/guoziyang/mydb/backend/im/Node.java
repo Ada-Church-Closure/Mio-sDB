@@ -10,17 +10,23 @@ import top.guoziyang.mydb.backend.tm.TransactionManagerImpl;
 import top.guoziyang.mydb.backend.utils.Parser;
 
 /**
+ * Node都存储在DataItem中,也是数据库的记录,但是只是查询会很快速.
  * Node结构如下：
  * [LeafFlag][KeyNumber][SiblingUid]
  * [Son0][Key0][Son1][Key1]...[SonN][KeyN]
+ * 其中 LeafFlag 标记了该节点是否是个叶子节点；KeyNumber 为该节点中 key 的个数；SiblingUid 是其兄弟节点存储在 DM 中的 UID。后续是穿插的子节点（SonN）和 KeyN。最后的一个 KeyN 始终为 MAX_VALUE，以此方便查找。
  */
 public class Node {
+    // 判断是否是叶子节点
     static final int IS_LEAF_OFFSET = 0;
+    // 该节点有几个key
     static final int NO_KEYS_OFFSET = IS_LEAF_OFFSET+1;
+    // 兄弟节点的UID
     static final int SIBLING_OFFSET = NO_KEYS_OFFSET+2;
     static final int NODE_HEADER_SIZE = SIBLING_OFFSET+8;
 
     static final int BALANCE_NUMBER = 32;
+    // 一个节点的大小.
     static final int NODE_SIZE = NODE_HEADER_SIZE + (2*8)*(BALANCE_NUMBER*2+2);
 
     BPlusTree tree;
@@ -89,23 +95,38 @@ public class Node {
         }
     }
 
+    /**
+     * 初始化一个根节点的数据
+     * @param left  左边节点
+     * @param right 右边节点
+     * @param key   关键字
+     * @return      节点的原始数据
+     */
     static byte[] newRootRaw(long left, long right, long key)  {
         SubArray raw = new SubArray(new byte[NODE_SIZE], 0, NODE_SIZE);
 
+        // 不是叶子节点
         setRawIsLeaf(raw, false);
+        // 关键字
         setRawNoKeys(raw, 2);
+        // 是否有兄弟节点
         setRawSibling(raw, 0);
+        // 左边儿子节点
         setRawKthSon(raw, left, 0);
+        // 初始值为key
         setRawKthKey(raw, key, 0);
+        // 右边儿子
         setRawKthSon(raw, right, 1);
+        // 最后一个始终为最大值
         setRawKthKey(raw, Long.MAX_VALUE, 1);
 
         return raw.raw;
     }
 
+    // 生成空的根节点
     static byte[] newNilRootRaw()  {
         SubArray raw = new SubArray(new byte[NODE_SIZE], 0, NODE_SIZE);
-
+        // 为什么是isLeaf?
         setRawIsLeaf(raw, true);
         setRawNoKeys(raw, 0);
         setRawSibling(raw, 0);
@@ -142,20 +163,26 @@ public class Node {
         long siblingUid;
     }
 
+    // 辅助随机查找方法.
     public SearchNextRes searchNext(long key) {
         dataItem.rLock();
         try {
             SearchNextRes res = new SearchNextRes();
+            // 有几个key
             int noKeys = getRawNoKeys(raw);
+            // 遍历这些keys
             for(int i = 0; i < noKeys; i ++) {
+                // 拿到第几个key
                 long ik = getRawKthKey(raw, i);
                 if(key < ik) {
+                    // 找到这个位置,返回查询结果,这只是一个辅助的方法
                     res.uid = getRawKthSon(raw, i);
                     res.siblingUid = 0;
                     return res;
                 }
             }
             res.uid = 0;
+            // 没查询到,就返回兄弟节点的uid
             res.siblingUid = getRawSibling(raw);
             return res;
 
@@ -169,22 +196,27 @@ public class Node {
         long siblingUid;
     }
 
+    // leafSearchRange 方法在当前节点进行范围查找，范围是 [leftKey, rightKey]，这里约定如果 rightKey 大于等于该节点的最大的 key, 则还同时返回兄弟节点的 UID，方便继续搜索下一个节点。
     public LeafSearchRangeRes leafSearchRange(long leftKey, long rightKey) {
         dataItem.rLock();
         try {
             int noKeys = getRawNoKeys(raw);
             int kth = 0;
+            // 遍历每一个key.
             while(kth < noKeys) {
                 long ik = getRawKthKey(raw, kth);
+                // 找到范围之内的key.
                 if(ik >= leftKey) {
                     break;
                 }
+                // 我们下一次从这个kth开始收集.
                 kth ++;
             }
             List<Long> uids = new ArrayList<>();
             while(kth < noKeys) {
                 long ik = getRawKthKey(raw, kth);
                 if(ik <= rightKey) {
+                    // 区间范围内的全部收集起来.
                     uids.add(getRawKthSon(raw, kth));
                     kth ++;
                 } else {
@@ -192,7 +224,10 @@ public class Node {
                 }
             }
             long siblingUid = 0;
+            // 这意味着已经遍历到了最右边.
             if(kth == noKeys) {
+                // 那我们还会附带返回兄弟节点
+                // 方便下一次查询.
                 siblingUid = getRawSibling(raw);
             }
             LeafSearchRangeRes res = new LeafSearchRangeRes();
@@ -271,7 +306,9 @@ public class Node {
         return true;
     }
 
+    // 什么时候需要进行分裂的操作?
     private boolean needSplit() {
+        // 64阶树.
         return BALANCE_NUMBER*2 == getRawNoKeys(raw);
     }
 

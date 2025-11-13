@@ -34,6 +34,7 @@ public class Entry {
     private static final int OF_XMAX = OF_XMIN+8;
     private static final int OF_DATA = OF_XMAX+8;
 
+    // 每一个entry都有自己的唯一uid
     private long uid;
     // 一条记录存储于一个dataItem中
     private DataItem dataItem;

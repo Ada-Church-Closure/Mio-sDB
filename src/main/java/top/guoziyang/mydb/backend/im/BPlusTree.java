@@ -15,6 +15,14 @@ import top.guoziyang.mydb.backend.im.Node.SearchNextRes;
 import top.guoziyang.mydb.backend.tm.TransactionManagerImpl;
 import top.guoziyang.mydb.backend.utils.Parser;
 
+// 建立索引的核心就是B+ tree
+// 索引的数据是直接插入数据库文件中,不需要版本管理.
+// TODO 实现全表扫描
+// 由于 B+ 树在插入删除时，会动态调整，根节点不是固定节点，于是设置一个 bootDataItem，该 DataItem 中存储了根节点的 UID。可以注意到，IM 在操作 DM 时，使用的事务都是 SUPER_XID。
+
+// 我们就向上层提供:
+// 1.插入
+// 2.搜索
 public class BPlusTree {
     DataManager dm;
     long bootUid;
@@ -41,6 +49,7 @@ public class BPlusTree {
     private long rootUid() {
         bootLock.lock();
         try {
+            // 用一个bootDataItem存储根节点的信息.
             SubArray sa = bootDataItem.data();
             return Parser.parseLong(Arrays.copyOfRange(sa.raw, sa.start, sa.start+8));
         } finally {
@@ -48,6 +57,7 @@ public class BPlusTree {
         }
     }
 
+    // root节点也会进行更新.
     private void updateRootUid(long left, long right, long rightKey) throws Exception {
         bootLock.lock();
         try {
