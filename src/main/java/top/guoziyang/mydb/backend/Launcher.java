@@ -15,6 +15,7 @@ import top.guoziyang.mydb.backend.vm.VersionManager;
 import top.guoziyang.mydb.backend.vm.VersionManagerImpl;
 import top.guoziyang.mydb.common.Error;
 
+// 启动入口.
 public class Launcher {
 
     public static final int port = 9999;
@@ -32,10 +33,13 @@ public class Launcher {
         CommandLineParser parser = new DefaultParser();
         CommandLine cmd = parser.parse(options,args);
 
+        // 启动已有的数据库.
         if(cmd.hasOption("open")) {
             openDB(cmd.getOptionValue("open"), parseMem(cmd.getOptionValue("mem")));
             return;
         }
+
+        // 创建一个数据库.
         if(cmd.hasOption("create")) {
             createDB(cmd.getOptionValue("create"));
             return;

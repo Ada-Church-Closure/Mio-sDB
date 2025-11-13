@@ -14,7 +14,7 @@ import top.guoziyang.mydb.common.Error;
 // 我们称XID是一个全局的文件,xid是一个事务持有的标识符
 // XID文件格式:
 // XID_FILE_HEADER:
-// | 8 bytes |  --> xidCounter
+// | 8 bytes |  --> xidCounter 事务的总数量,也就是最大事务的编号.
 // XID_FILE_BODY:
 // | 1 byte  |  --> xid状态(0:active, 1:committed, 2:aborted)
 // | 1 byte  |  --> xid状态

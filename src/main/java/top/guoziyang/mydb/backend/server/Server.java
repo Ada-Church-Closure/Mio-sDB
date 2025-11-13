@@ -35,6 +35,7 @@ public class Server {
         ThreadPoolExecutor tpe = new ThreadPoolExecutor(10, 20, 1L, TimeUnit.SECONDS, new ArrayBlockingQueue<>(100), new ThreadPoolExecutor.CallerRunsPolicy());
         try {
             while(true) {
+                // 直接用java socket通信.
                 Socket socket = ss.accept();
                 Runnable worker = new HandleSocket(socket, tbm);
                 tpe.execute(worker);
@@ -58,6 +59,7 @@ class HandleSocket implements Runnable {
         this.tbm = tbm;
     }
 
+    // 具体的处理逻辑.
     @Override
     public void run() {
         InetSocketAddress address = (InetSocketAddress)socket.getRemoteSocketAddress();

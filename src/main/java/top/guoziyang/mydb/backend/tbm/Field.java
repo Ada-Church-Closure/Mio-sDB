@@ -16,8 +16,9 @@ import top.guoziyang.mydb.common.Error;
 /**
  * field 表示字段信息
  * 二进制格式为：
- * [FieldName][TypeName][IndexUid]
+ * [FieldName][TypeName][IndexUid] [字段名][类型][是否建立了index索引(有index,这个字段会直接指向索引二叉树的root)]
  * 如果field无索引，IndexUid为0
+ * 字段信息直接保存在一个entry内部.
  */
 public class Field {
     long uid;
@@ -27,6 +28,8 @@ public class Field {
     private long index;
     private BPlusTree bt;
 
+
+    // 读取一个字段的raw数据
     public static Field loadField(Table tb, long uid) {
         byte[] raw = null;
         try {
@@ -35,6 +38,7 @@ public class Field {
             Panic.panic(e);
         }
         assert raw != null;
+        // 并且进行解析.
         return new Field(uid, tb).parseSelf(raw);
     }
 
@@ -69,6 +73,7 @@ public class Field {
         return this;
     }
 
+    // 创建一个字段
     public static Field createField(Table tb, long xid, String fieldName, String fieldType, boolean indexed) throws Exception {
         typeCheck(fieldType);
         Field f = new Field(tb, fieldName, fieldType, 0);
@@ -82,10 +87,12 @@ public class Field {
         return f;
     }
 
+    // 插入的数据组合成一个raw字段,然后进行insert(持久化).
     private void persistSelf(long xid) throws Exception {
         byte[] nameRaw = Parser.string2Byte(fieldName);
         byte[] typeRaw = Parser.string2Byte(fieldType);
         byte[] indexRaw = Parser.long2Byte(index);
+        // 还是调用VM的接口.
         this.uid = ((TableManagerImpl)tb.tbm).vm.insert(xid, Bytes.concat(nameRaw, typeRaw, indexRaw));
     }
 

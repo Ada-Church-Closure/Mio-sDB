@@ -3,6 +3,7 @@ package top.guoziyang.mydb.client;
 import top.guoziyang.mydb.transport.Package;
 import top.guoziyang.mydb.transport.Packager;
 
+// 直接实现了一次的收发操作.
 public class RoundTripper {
     private Packager packager;
 

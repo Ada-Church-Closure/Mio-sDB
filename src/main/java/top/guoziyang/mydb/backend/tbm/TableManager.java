@@ -10,6 +10,7 @@ import top.guoziyang.mydb.backend.parser.statement.Update;
 import top.guoziyang.mydb.backend.utils.Parser;
 import top.guoziyang.mydb.backend.vm.VersionManager;
 
+// 这里就已经是提供给最外层的Server所使用的接口了.
 public interface TableManager {
     BeginRes begin(Begin begin);
     byte[] commit(long xid) throws Exception;
@@ -23,6 +24,7 @@ public interface TableManager {
     byte[] update(long xid, Update update) throws Exception;
     byte[] delete(long xid, Delete delete) throws Exception;
 
+    // 创建新表使用的是头插法,每次创建的时候,都要更新bt文件.
     public static TableManager create(String path, VersionManager vm, DataManager dm) {
         Booter booter = Booter.create(path);
         booter.update(Parser.long2Byte(0));

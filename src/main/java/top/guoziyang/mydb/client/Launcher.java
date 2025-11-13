@@ -8,6 +8,7 @@ import top.guoziyang.mydb.transport.Encoder;
 import top.guoziyang.mydb.transport.Packager;
 import top.guoziyang.mydb.transport.Transporter;
 
+// 客户端的启动类
 public class Launcher {
     public static void main(String[] args) throws UnknownHostException, IOException {
         Socket socket = new Socket("127.0.0.1", 9999);

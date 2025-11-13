@@ -10,6 +10,7 @@ public class Client {
         this.rt = new RoundTripper(packager);
     }
 
+    // 这里就是Client读取shell,直接收发package即可.
     public byte[] execute(byte[] stat) throws Exception {
         Package pkg = new Package(stat, null);
         Package resPkg = rt.roundTrip(pkg);

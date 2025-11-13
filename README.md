@@ -2,6 +2,9 @@
 
 > 基于 socket 的 server 和 client进行前后端的通信.
 >
+> 原博客教程及仓库:
+>
+> https://shinya.click/projects/mydb/mydb0
 
 ## 运行方式
 
@@ -653,9 +656,249 @@ insert:显然**insert**操作只会在叶子节点上进行.
 
 > ​	在《数据库原理》里面，对**聚簇索引**的解释是： **聚簇索引的顺序就是数据的物理存储顺序**； 而对**非聚簇索引**的解释是： **索引顺序与数据物理排列无关**。正是因为如此，所以一个表最多只能有一个聚簇索引。直观上来说，聚簇索引的叶子节点就是数据节点； 而非聚簇索引的叶子节点仍然是索引节点，只不过是指向对应数据块的指针。
 
+## 5.实现table manager 字段与表管理器 TBM
 
+### SQL解析器
 
+实现了以下的SQL:
 
+```sql
+<begin statement> # 开启事务,设置隔离级别
+    begin [isolation level (read committedrepeatable read)]
+        begin isolation level read committed
+
+<commit statement>	# 提交事务
+    commit
+
+<abort statement>	# 回滚事务
+    abort
+
+<create statement>	# 创建table
+    create table <table name>
+    <field name> <field type>
+    <field name> <field type>
+    ...
+    <field name> <field type>
+    [(index <field name list>)]
+        create table students
+        id int32,
+        name string,
+        age int32,
+        (index id name)
+
+<drop statement>	# 废弃table
+    drop table <table name>
+        drop table students
+
+<select statement>	# 查询语句
+    select (*<field name list>) from <table name> [<where statement>]
+        select * from student where id = 1
+        select name from student where id > 1 and id < 4
+        select name, age, id from student where id = 12
+
+<insert statement>	# 插入语句
+    insert into <table name> values <value list>
+        insert into student values 5 "Zhang Yuanjia" 22
+
+<delete statement>	# 删除
+    delete from <table name> <where statement>
+        delete from student where name = "Zhang Yuanjia"
+
+<update statement>	# 更新
+    update <table name> set <field name>=<value> [<where statement>]
+        update student set name = "ZYJ" where id = 5
+
+<where statement>	# 条件查询
+    where <field name> (><=) <value> [(andor) <field name> (><=) <value>]
+        where age > 10 or age < 3
+					# 字段和表名
+<field name> <table name>
+    [a-zA-Z][a-zA-Z0-9_]*
+					# 字段类型
+<field type>
+    int32 int64 string
+
+<value>
+    .*
+```
+
+解析就是parser对于输入的语句做逐字节的解析,并且切割成token,根据首个token来包装成不同的类.
+
+### 表和字段的管理
+
+基本的结构:
+
+```java
+/**
+ * Table 维护了表结构
+ * 二进制结构如下：
+ * [TableName][NextTable]
+ * [Field1Uid][Field2Uid]...[FieldNUid]
+ */
+public class Table {
+    TableManager tbm;
+    long uid;
+    String name;
+    byte status;
+    long nextUid;
+    List<Field> fields = new ArrayList<>();
+    ...
+    }
+```
+
+一个字段的结构:
+
+```java
+/**
+ * field 表示字段信息
+ * 二进制格式为：
+ * [FieldName][TypeName][IndexUid] [字段名][类型][是否建立了index索引(有index,这个字段会直接指向索引二叉树的root)]
+ * 如果field无索引，IndexUid为0
+ * 字段信息直接保存在一个entry内部.
+ */
+public class Field {
+    long uid;
+    private Table tb;
+    String fieldName;
+    String fieldType;
+    private long index;
+    private BPlusTree bt;
+    ...
+}
+```
+
+一个database中存在多张table,我们使用链表的形式把这些table连接起来:
+
+```txt
+[TableName][NextTable]
+[Field1Uid][Field2Uid]...[FieldNUid]
+```
+
+> ​	这里由于每个 **Entry** 中的数据，字节数是确定的，于是无需保存字段的个数。根据 UID 从 Entry 中读取表数据的过程和读取字段的过程类似。
+>
+> ​	对表和字段的操作，有一个很重要的步骤，就是计算 Where 条件的范围，目前 MYDB 的 Where 只支持两个条件的与和或。例如有条件的 Delete，计算 Where，最终就需要获取到条件范围内所有的 UID。MYDB 只支持已索引字段作为 Where 的条件。计算 Where 的范围，具体可以查看 Table 的 `parseWhere()` 和 `calWhere()` 方法，以及 Field 类的 `calExp()` 方法。
+>
+> ​	由于 TBM 的表管理，使用的是链表串起的 Table 结构，所以就必须保存一个链表的头节点，即第一个表的 UID，这样在 MYDB 启动时，才能快速找到表信息。
+>
+> ​	MYDB 使用 Booter 类和 bt 文件，来管理 MYDB 的启动信息，虽然现在所需的启动信息，只有一个：头表的 UID。**Booter 类对外提供了两个方法：load 和 update，并保证了其原子性。**
+>
+> ​	**update 在修改 bt 文件内容时，没有直接对 bt 文件进行修改，而是首先将内容写入一个 bt_tmp 文件中，随后将这个文件重命名为 bt 文件。以期通过操作系统重命名文件的原子性，来保证操作的原子性。**
+
+要用一个**bt**文件保存第一个table的uid,因为我们要快速找到table的信息:
+
+```java
+// 记录第一个表的uid
+public class Booter {
+    public static final String BOOTER_SUFFIX = ".bt";
+    public static final String BOOTER_TMP_SUFFIX = ".bt_tmp";
+
+    String path;
+    File file;
+	...
+}
+```
+
+最终TBM实现给server使用的所有接口:
+
+```java
+// 这里就已经是提供给最外层的Server所使用的接口了.
+public interface TableManager {
+    BeginRes begin(Begin begin);
+    byte[] commit(long xid) throws Exception;
+    byte[] abort(long xid);
+
+    byte[] show(long xid);
+    byte[] create(long xid, Create create) throws Exception;
+
+    byte[] insert(long xid, Insert insert) throws Exception;
+    byte[] read(long xid, Select select) throws Exception;
+    byte[] update(long xid, Update update) throws Exception;
+    byte[] delete(long xid, Delete delete) throws Exception;
+
+    // 创建新表使用的是头插法,每次创建的时候,都要更新bt文件.
+    public static TableManager create(String path, VersionManager vm, DataManager dm) {
+        Booter booter = Booter.create(path);
+        booter.update(Parser.long2Byte(0));
+        return new TableManagerImpl(vm, dm, booter);
+    }
+
+    public static TableManager open(String path, VersionManager vm, DataManager dm) {
+        Booter booter = Booter.open(path);
+        return new TableManagerImpl(vm, dm, booter);
+    }
+}
+```
+
+## 6.最终实现软件:Server和Client的通信
+
+> 通信是利用Socket.
+
+### 通信
+
+用**Package**作为一个基本的结构:
+
+```java
+public class Package {
+    byte[] data;
+    Exception err;
+
+    public Package(byte[] data, Exception err) {
+        this.data = data;
+        this.err = err;
+    }
+
+    public byte[] getData() {
+        return data;
+    }
+
+    public Exception getErr() {
+        return err;
+    }
+}
+```
+
+发送前**编码**,收到之后会进行**解码**的操作.
+
+基本格式:(其实就是字节数组前面加了一个1.)
+
+```java
+[Flag][data]
+```
+
+利用Encoder的类:
+
+```java
+public class Encoder {
+
+    public byte[] encode(Package pkg) {
+        if(pkg.getErr() != null) {
+            Exception err = pkg.getErr();
+            String msg = "Intern server error!";
+            if(err.getMessage() != null) {
+                msg = err.getMessage();
+            }
+            // 1,表明出错.
+            return Bytes.concat(new byte[]{1}, msg.getBytes());
+        } else {
+            // 0,表示数据本身没错.
+            return Bytes.concat(new byte[]{0}, pkg.getData());
+        }
+    }
+
+    public Package decode(byte[] data) throws Exception {
+        if(data.length < 1) {
+            throw Error.InvalidPkgDataException;
+        }
+        if(data[0] == 0) {
+            return new Package(Arrays.copyOfRange(data, 1, data.length), null);
+        } else if(data[0] == 1) {
+            return new Package(null, new RuntimeException(new String(Arrays.copyOfRange(data, 1, data.length))));
+        } else {
+            throw Error.InvalidPkgDataException;
+        }
+    }
+}
+```
 
 
 

@@ -14,6 +14,7 @@ import top.guoziyang.mydb.backend.tbm.BeginRes;
 import top.guoziyang.mydb.backend.tbm.TableManager;
 import top.guoziyang.mydb.common.Error;
 
+// 具体执行sql的实现,执行类.
 public class Executor {
     private long xid;
     TableManager tbm;
@@ -69,6 +70,7 @@ public class Executor {
         }
         try {
             byte[] res = null;
+            // TODO 为什么用 if else 判断?
             if(Show.class.isInstance(stat)) {
                 res = tbm.show(xid);
             } else if(Create.class.isInstance(stat)) {

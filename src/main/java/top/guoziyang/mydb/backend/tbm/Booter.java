@@ -64,6 +64,7 @@ public class Booter {
         return buf;
     }
 
+    // 更新bt
     public void update(byte[] data) {
         File tmp = new File(path + BOOTER_TMP_SUFFIX);
         try {
